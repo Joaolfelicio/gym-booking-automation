@@ -40,6 +40,9 @@ class ConfigLoader:
             # For users and classes, we'll assume they are stored as YAML/JSON strings in AppConfig
             users_setting = client.get_configuration_setting(key="users").value
             classes_setting = client.get_configuration_setting(key="classes").value
+            
+            logging.info(f"Retrieved users_setting: {users_setting[:50]}...")
+            
         except HttpResponseError as e:
             logging.error(f"Azure App Configuration error (Status: {e.status_code}): {e.message}")
             if e.status_code == 403:
@@ -70,11 +73,15 @@ class ConfigLoader:
         )
 
     def _substitute_env(self, value: str) -> str:
-        if value and value.startswith("${") and value.endswith("}"):
+        if not value or not isinstance(value, str):
+            return value
+            
+        value = value.strip().strip("'").strip('"')
+        if value.startswith("${") and value.endswith("}"):
             env_var = value[2:-1]
             result = os.getenv(env_var)
             if result is None:
-                logging.warning(f"Environment variable '{env_var}' not found. Using the placeholder value: '{value}'")
+                logging.warning(f"Environment variable '{env_var}' not found.")
                 return value
             return result
         return value
