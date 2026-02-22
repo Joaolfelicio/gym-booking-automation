@@ -8,8 +8,9 @@ on:
 
 env:
   AZURE_FUNCTIONAPP_NAME: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: "."
   AZURE_APPCONFIG_NAME: ${{ secrets.AZURE_APPCONFIG_NAME }}
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   build-and-deploy:
@@ -23,10 +24,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: "Install dependencies"
+      - name: "Resolve Project Dependencies Using Pip"
+        shell: bash
         run: |
+          pushd './${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
           python -m pip install --upgrade pip
-          pip install -r requirements.txt --target=".python_packages"
+          pip install -r requirements.txt --target=".python_packages/lib/site-packages"
+          popd
 
       - name: "Log in to Azure"
         uses: azure/login@v1
@@ -45,22 +49,20 @@ jobs:
 
       - name: "Update App Configuration"
         run: |
-          # Provision common keys in Azure App Configuration
           az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "app_id" --value "EC1D38D7-D359-48D0-A60C-D8C0B8FB9DF9" --yes --auth-mode login
           az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "client" --value "enduserweb" --yes --auth-mode login
           az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "client_version" --value "1.13.10-1629,enduserweb" --yes --auth-mode login
           az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "facility_id" --value "334e683b-fd35-4076-95be-c32c233d1e46" --yes --auth-mode login
 
-          USERS_JSON='[{"username": "${USER0_USERNAME}", "password": "${USER0_PASSWORD}"}, {"username": "${USER1_USERNAME}", "password": "${USER1_PASSWORD}"}]'
-          CLASSES_JSON='[{"name": "AQUA POWER", "weekday": "Tuesday", "opening_hour": "08:00:00+01:00", "user_names": ["${USER0_USERNAME}", "${USER1_USERNAME}"]}, {"name": "CIRCUIT TRAINING", "weekday": "Wednesday", "opening_hour": "08:00:00+01:00", "user_names": ["${USER0_USERNAME}", "${USER1_USERNAME}"]}, {"name": "AQUA FITNESS", "weekday": "Friday", "opening_hour": "08:00:00+01:00", "user_names": ["${USER0_USERNAME}"]}, {"name": "AQUA FITNESS", "weekday": "Saturday", "opening_hour": "08:00:00+01:00", "user_names": ["${USER0_USERNAME}", "${USER1_USERNAME}"]}]'
-
-          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "users" --value "$USERS_JSON" --content-type "application/json" --yes --auth-mode login
-          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "classes" --value "$CLASSES_JSON" --content-type "application/json" --yes --auth-mode login
+          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "users" --value '${{ vars.USERS_CONFIG_JSON }}' --content-type "application/json" --yes --auth-mode login
+          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "classes" --value '${{ vars.CLASSES_CONFIG_JSON }}' --content-type "application/json" --yes --auth-mode login
 
       - name: "Run Azure Functions Action"
         uses: azure/functions-action@v1
+        id: fa
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: "."
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
           scm-do-build-during-deployment: true
           enable-oryx-build: true
