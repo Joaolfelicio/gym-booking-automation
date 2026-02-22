@@ -46,7 +46,8 @@ jobs:
             USER1_PASSWORD="${{ secrets.USER1_PASSWORD }}" \
             AZURE_APP_CONFIG_ENDPOINT="${{ secrets.AZURE_APP_CONFIG_ENDPOINT }}" \
             WEBSITE_TIME_ZONE="Europe/Luxembourg" \
-            AzureWebJobsStorage__accountName="${{ vars.AZURE_STORAGE_ACCOUNT_NAME }}"
+            AzureWebJobsStorage__accountName="${{ vars.AZURE_STORAGE_ACCOUNT_NAME }}" \
+            AzureWebJobsStorage__credential="managedidentity"
 
       - name: "Update App Configuration"
         run: |
