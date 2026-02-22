@@ -1,0 +1,59 @@
+name: Deploy Gym Booking Function
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'gym-booking-func-app' # Update with your function app name
+  AZURE_APPCONFIG_NAME: 'gym-booking-appconfig' # Update with your AppConfig name
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v3
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 'Install dependencies'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt --target=".python_packages"
+
+      - name: 'Log in to Azure'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: 'Update App Configuration'
+        run: |
+          # Provision common keys in Azure App Configuration
+          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "app_id" --value "EC1D38D7-D359-48D0-A60C-D8C0B8FB9DF9" --yes
+          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "client" --value "enduserweb" --yes
+          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "client_version" --value "1.13.10-1629,enduserweb" --yes
+          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "facility_id" --value "334e683b-fd35-4076-95be-c32c233d1e46" --yes
+          
+          # Upload users and classes as YAML/JSON
+          # Placeholders like ${VAR_NAME} will be substituted by the script from Function App settings
+          
+          USERS_JSON='[{"username": "${USER0_USERNAME}", "password": "${USER0_PASSWORD}"}, {"username": "${USER1_USERNAME}", "password": "${USER1_PASSWORD}"}]'
+          CLASSES_JSON='[{"name": "AQUA POWER", "weekday": "Tuesday", "opening_hour": "08:00:00+01:00", "user_names": ["${USER0_USERNAME}", "${USER1_USERNAME}"]}, {"name": "CIRCUIT TRAINING", "weekday": "Wednesday", "opening_hour": "08:00:00+01:00", "user_names": ["${USER0_USERNAME}", "${USER1_USERNAME}"]}, {"name": "AQUA FITNESS", "weekday": "Friday", "opening_hour": "08:00:00+01:00", "user_names": ["${USER0_USERNAME}"]}, {"name": "AQUA FITNESS", "weekday": "Saturday", "opening_hour": "08:00:00+01:00", "user_names": ["${USER0_USERNAME}", "${USER1_USERNAME}"]}]'
+          
+          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "users" --value "$USERS_JSON" --content-type "application/json" --yes
+          az appconfig kv set --name ${{ env.AZURE_APPCONFIG_NAME }} --key "classes" --value "$CLASSES_JSON" --content-type "application/json" --yes
+
+      - name: 'Run Azure Functions Action'
+        uses: azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: '.'
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true

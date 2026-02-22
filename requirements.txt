@@ -1,0 +1,7 @@
+azure-functions
+azure-appconfiguration
+azure-identity
+requests
+pyyaml
+pydantic
+python-dateutil

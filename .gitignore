@@ -1,0 +1,14 @@
+bin/
+obj/
+.python_packages/
+__pycache__/
+.vscode/
+config.yaml
+.env
+.funcignore
+dist/
+build/
+*.egg-info/
+plan.md
+notes.md
+.venv
