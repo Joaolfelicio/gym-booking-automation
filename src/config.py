@@ -26,7 +26,8 @@ class ConfigLoader:
         return AppConfig(**data)
 
     def _load_from_azure(self) -> AppConfig:
-        credential = DefaultAzureCredential()
+        client_id = os.getenv("AZURE_CLIENT_ID")
+        credential = DefaultAzureCredential(managed_identity_client_id=client_id)
         client = AzureAppConfigurationClient(base_url=self.endpoint, credential=credential)
         
         # Fetching common settings
