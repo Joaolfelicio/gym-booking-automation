@@ -61,7 +61,12 @@ class ConfigLoader:
             password = self._substitute_env(u.get("password"))
             users.append(UserConfig(username=username, password=password))
 
-        classes = [ClassConfig(**c) for c in classes_raw]
+        classes = []
+        for c in classes_raw:
+            # Substitute environment variables in user_names for each class
+            substituted_user_names = [self._substitute_env(un) for un in c.get("user_names", [])]
+            c["user_names"] = substituted_user_names
+            classes.append(ClassConfig(**c))
 
         return AppConfig(
             app_id=app_id,
