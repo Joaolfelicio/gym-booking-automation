@@ -3,6 +3,7 @@ import yaml
 import logging
 from azure.appconfiguration import AzureAppConfigurationClient
 from azure.identity import DefaultAzureCredential
+from azure.core.exceptions import HttpResponseError
 from .models import AppConfig, UserConfig, ClassConfig
 
 class ConfigLoader:
@@ -30,15 +31,24 @@ class ConfigLoader:
         credential = DefaultAzureCredential(managed_identity_client_id=client_id)
         client = AzureAppConfigurationClient(base_url=self.endpoint, credential=credential)
         
-        # Fetching common settings
-        app_id = client.get_configuration_setting(key="app_id").value
-        client_name = client.get_configuration_setting(key="client").value
-        client_version = client.get_configuration_setting(key="client_version").value
-        facility_id = client.get_configuration_setting(key="facility_id").value
+        try:
+            # Fetching common settings
+            app_id = client.get_configuration_setting(key="app_id").value
+            client_name = client.get_configuration_setting(key="client").value
+            client_version = client.get_configuration_setting(key="client_version").value
+            facility_id = client.get_configuration_setting(key="facility_id").value
 
-        # For users and classes, we'll assume they are stored as YAML/JSON strings in AppConfig
-        users_setting = client.get_configuration_setting(key="users").value
-        classes_setting = client.get_configuration_setting(key="classes").value
+            # For users and classes, we'll assume they are stored as YAML/JSON strings in AppConfig
+            users_setting = client.get_configuration_setting(key="users").value
+            classes_setting = client.get_configuration_setting(key="classes").value
+        except HttpResponseError as e:
+            logging.error(f"Azure App Configuration error (Status: {e.status_code}): {e.message}")
+            if e.status_code == 403:
+                logging.error("Check that the Managed Identity has 'App Configuration Data Reader' role and Networking allows access.")
+            raise
+        except Exception as e:
+            logging.error(f"Unexpected error loading from Azure: {str(e)}")
+            raise
         
         users_raw = yaml.safe_load(users_setting)
         classes_raw = yaml.safe_load(classes_setting)
