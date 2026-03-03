@@ -12,9 +12,6 @@ app = func.FunctionApp()
 def gym_booking_timer_trigger(myTimer: func.TimerRequest) -> None:
     utc_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    if myTimer.past_due:
-        logging.info('The timer is past due!')
-
     logging.info('Gym booking script started at %s', utc_timestamp)
 
     try:

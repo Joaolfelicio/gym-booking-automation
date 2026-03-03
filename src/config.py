@@ -41,8 +41,6 @@ class ConfigLoader:
             users_setting = client.get_configuration_setting(key="users").value
             classes_setting = client.get_configuration_setting(key="classes").value
             
-            logging.info(f"Retrieved users_setting: {users_setting[:50]}...")
-            
         except HttpResponseError as e:
             logging.error(f"Azure App Configuration error (Status: {e.status_code}): {e.message}")
             if e.status_code == 403:
