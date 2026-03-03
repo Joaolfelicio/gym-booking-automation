@@ -8,7 +8,7 @@ from src.models import AppConfig, UserConfig, ClassConfig, GymClass, LoginResult
 
 app = func.FunctionApp()
 
-@app.timer_trigger(schedule="5 0 8 * * *", arg_name="myTimer", run_on_startup=False, use_monitor=True) 
+@app.timer_trigger(schedule="5 0 8 * * *", arg_name="myTimer", run_on_startup=False, use_monitor=False) 
 def gym_booking_timer_trigger(myTimer: func.TimerRequest) -> None:
     utc_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
